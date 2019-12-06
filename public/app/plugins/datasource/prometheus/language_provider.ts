@@ -13,6 +13,7 @@ const DEFAULT_KEYS = ['job', 'instance'];
 const EMPTY_SELECTOR = '{}';
 const HISTORY_ITEM_COUNT = 5;
 const HISTORY_COUNT_CUTOFF = 1000 * 60 * 60 * 24; // 24h
+export const DEFAULT_LOOKUP_METRICS_THRESHOLD = 1000; // number of metrics defining an installation that's too big
 
 const wrapLabel = (label: string): CompletionItem => ({ label });
 
@@ -47,6 +48,8 @@ export default class PromQlLanguageProvider extends LanguageProvider {
   metrics?: string[];
   startTask: Promise<any>;
   datasource: PrometheusDatasource;
+  lookupMetricsThreshold: number;
+  lookupsDisabled: boolean; // Dynamically set to true for big/slow instances
 
   constructor(datasource: PrometheusDatasource, initialValues?: any) {
     super();
@@ -57,6 +60,9 @@ export default class PromQlLanguageProvider extends LanguageProvider {
     this.labelKeys = {};
     this.labelValues = {};
     this.metrics = [];
+    // Disable lookups until we know the instance is small enough
+    this.lookupMetricsThreshold = DEFAULT_LOOKUP_METRICS_THRESHOLD;
+    this.lookupsDisabled = true;
 
     Object.assign(this, initialValues);
   }
@@ -81,22 +87,10 @@ export default class PromQlLanguageProvider extends LanguageProvider {
     return [];
   };
 
-  start = () => {
-    if (!this.startTask) {
-      this.startTask = this.fetchMetrics();
-    }
-    return this.startTask;
-  };
-
-  fetchMetrics = async () => {
-    this.metrics = await this.fetchMetricNames();
+  start = async (): Promise<any> => {
+    this.metrics = await this.request('/api/v1/label/__name__/values');
+    this.lookupsDisabled = this.metrics.length > this.lookupMetricsThreshold;
     this.processHistogramMetrics(this.metrics);
-
-    return Promise.resolve([]);
-  };
-
-  fetchMetricNames = async (): Promise<string[]> => {
-    return this.request('/api/v1/label/__name__/values');
   };
 
   processHistogramMetrics = (data: string[]) => {
@@ -353,6 +347,9 @@ export default class PromQlLanguageProvider extends LanguageProvider {
   };
 
   fetchLabelValues = async (key: string) => {
+    if (this.lookupsDisabled) {
+      return;
+    }
     try {
       const data = await this.request(`/api/v1/label/${key}/values`);
       const existingValues = this.labelValues[EMPTY_SELECTOR];
@@ -367,6 +364,9 @@ export default class PromQlLanguageProvider extends LanguageProvider {
   };
 
   fetchSeriesLabels = async (name: string, withName?: boolean) => {
+    if (this.lookupsDisabled) {
+      return;
+    }
     try {
       const tRange = this.datasource.getTimeRange();
       const data = await this.request(`/api/v1/series?match[]=${name}&start=${tRange['start']}&end=${tRange['end']}`);
