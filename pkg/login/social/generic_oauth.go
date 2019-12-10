@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/mail"
 	"regexp"
+	"strings"
 
 	"github.com/grafana/grafana/pkg/util/errutil"
 
@@ -82,6 +83,7 @@ type UserInfoJson struct {
 	Upn         string              `json:"upn"`
 	Attributes  map[string][]string `json:"attributes"`
 	rawJSON     []byte
+	Groups      []string            `json:"groups"`
 }
 
 func (info *UserInfoJson) String() string {
@@ -115,16 +117,6 @@ func (s *SocialGenericOAuth) UserInfo(client *http.Client, token *oauth2.Token) 
 		userInfo.Login = userInfo.Email
 	}
 
-	role := s.extractRole(&data, rawUserInfoResponse.Body)
-	org := s.extractOrganization()
-
-	fmt.Println("=======================================================================================")
-	fmt.Println(org, role, data.Groups)
-	fmt.Println("=======================================================================================")
-
-	userInfo.Role = role
-	userInfo.OrgName = org
-
 	if !s.IsTeamMember(client) {
 		return nil, errors.New("User not a member of one of the required teams")
 	}
@@ -149,6 +141,12 @@ func (s *SocialGenericOAuth) fillUserInfo(userInfo *BasicUserInfo, data *UserInf
 			userInfo.Role = role
 		}
 	}
+	org := s.extractOrganization()
+	userInfo.OrgName = org
+	fmt.Println("=======================================================================================")
+	fmt.Println(org, role, data.Groups)
+	fmt.Println("=======================================================================================")
+
 	if userInfo.Name == "" {
 		userInfo.Name = s.extractName(data)
 	}
@@ -240,10 +238,30 @@ func (s *SocialGenericOAuth) extractEmail(data *UserInfoJson) string {
 }
 
 func (s *SocialGenericOAuth) extractRole(data *UserInfoJson) (string, error) {
+	if len(s.groupRoleMap) != 0 {
+		roleType := models.RoleType(models.ROLE_VIEWER)
+		m := make(map[string]string)
+		for _, r := range s.groupRoleMap {
+			parts := strings.Split(r, ":")
+			if len(parts) == 2 {
+				m[parts[0]] = parts[1]
+			}
+		}
+		for i := range data.Groups {
+			if role, ok := m[data.Groups[i]]; ok {
+				rt := models.RoleType(role)
+				if rt.IsValid() {
+					if !roleType.Includes(rt) {
+						roleType = rt
+					}
+				}
+			}
+		}
+		return string(roleType), nil
+	}
 	if s.roleAttributePath == "" {
 		return "", nil
 	}
-
 	role, err := s.searchJSONForAttr(s.roleAttributePath, data.rawJSON)
 	if err != nil {
 		return "", err
