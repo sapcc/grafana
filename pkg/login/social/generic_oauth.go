@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/mail"
 	"regexp"
+	"strings"
 
 	"github.com/grafana/grafana/pkg/models"
 	"github.com/jmespath/go-jmespath"
@@ -23,6 +24,7 @@ type SocialGenericOAuth struct {
 	emailAttributeName   string
 	emailAttributePath   string
 	roleAttributePath    string
+	groupRoleMap         []string
 	teamIds              []int
 }
 
@@ -210,6 +212,7 @@ type UserInfoJson struct {
 	Email       string              `json:"email"`
 	Upn         string              `json:"upn"`
 	Attributes  map[string][]string `json:"attributes"`
+	Groups      []string            `json:"groups"`
 }
 
 func (s *SocialGenericOAuth) UserInfo(client *http.Client, token *oauth2.Token) (*BasicUserInfo, error) {
@@ -325,6 +328,27 @@ func (s *SocialGenericOAuth) extractEmail(data *UserInfoJson, userInfoResp []byt
 }
 
 func (s *SocialGenericOAuth) extractRole(data *UserInfoJson, userInfoResp []byte) string {
+	if len(s.groupRoleMap) != 0 {
+		roleType := models.RoleType(models.ROLE_VIEWER)
+		m := make(map[string]string)
+		for _, r := range s.groupRoleMap {
+			parts := strings.Split(r, ":")
+			if len(parts) == 2 {
+				m[parts[0]] = parts[1]
+			}
+		}
+		for i := range data.Groups {
+			if role, ok := m[data.Groups[i]]; ok {
+				rt := models.RoleType(role)
+				if rt.IsValid() {
+					if !roleType.Includes(rt) {
+						roleType = rt
+					}
+				}
+			}
+		}
+		return string(roleType)
+	}
 	if s.roleAttributePath != "" {
 		role := s.searchJSONForAttr(s.roleAttributePath, userInfoResp)
 		if role != "" {

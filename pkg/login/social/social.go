@@ -75,6 +75,7 @@ func NewOAuthService() {
 			EmailAttributeName:           sec.Key("email_attribute_name").String(),
 			EmailAttributePath:           sec.Key("email_attribute_path").String(),
 			RoleAttributePath:            sec.Key("role_attribute_path").String(),
+			GroupRoleMap:                 sec.Key("group_role_map").Strings(" "),
 			AllowedDomains:               util.SplitString(sec.Key("allowed_domains").String()),
 			HostedDomain:                 sec.Key("hosted_domain").String(),
 			AllowSignup:                  sec.Key("allow_sign_up").MustBool(),
@@ -171,6 +172,7 @@ func NewOAuthService() {
 				emailAttributeName:   info.EmailAttributeName,
 				emailAttributePath:   info.EmailAttributePath,
 				roleAttributePath:    info.RoleAttributePath,
+				groupRoleMap:         info.GroupRoleMap,
 				teamIds:              sec.Key("team_ids").Ints(","),
 				allowedOrganizations: util.SplitString(sec.Key("allowed_organizations").String()),
 			}
