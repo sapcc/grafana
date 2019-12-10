@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/mail"
 	"regexp"
+	"strings"
 
 	"github.com/grafana/grafana/pkg/util/errutil"
 
@@ -25,6 +26,7 @@ type SocialGenericOAuth struct {
 	emailAttributeName   string
 	emailAttributePath   string
 	roleAttributePath    string
+	groupRoleMap         []string
 	teamIds              []int
 }
 
@@ -91,6 +93,7 @@ type UserInfoJson struct {
 	Upn         string              `json:"upn"`
 	Attributes  map[string][]string `json:"attributes"`
 	rawJSON     []byte
+	Groups      []string            `json:"groups"`
 }
 
 func (info *UserInfoJson) String() string {
@@ -232,6 +235,28 @@ func (s *SocialGenericOAuth) extractEmail(data *UserInfoJson) string {
 }
 
 func (s *SocialGenericOAuth) extractRole(data *UserInfoJson) string {
+func (s *SocialGenericOAuth) extractRole(data *UserInfoJson, userInfoResp []byte) string {
+	if len(s.groupRoleMap) != 0 {
+		roleType := models.RoleType(models.ROLE_VIEWER)
+		m := make(map[string]string)
+		for _, r := range s.groupRoleMap {
+			parts := strings.Split(r, ":")
+			if len(parts) == 2 {
+				m[parts[0]] = parts[1]
+			}
+		}
+		for i := range data.Groups {
+			if role, ok := m[data.Groups[i]]; ok {
+				rt := models.RoleType(role)
+				if rt.IsValid() {
+					if !roleType.Includes(rt) {
+						roleType = rt
+					}
+				}
+			}
+		}
+		return string(roleType)
+	}
 	if s.roleAttributePath != "" {
 		role := s.searchJSONForAttr(s.roleAttributePath, data.rawJSON)
 		if role != "" {
