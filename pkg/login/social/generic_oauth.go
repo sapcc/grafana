@@ -22,6 +22,8 @@ type SocialGenericOAuth struct {
 	emailAttributeName   string
 	emailAttributePath   string
 	roleAttributePath    string
+	groupRoleMap         []string
+	orgName              string
 	teamIds              []int
 }
 
@@ -112,6 +114,16 @@ func (s *SocialGenericOAuth) UserInfo(client *http.Client, token *oauth2.Token) 
 	if userInfo.Login == "" {
 		userInfo.Login = userInfo.Email
 	}
+
+	role := s.extractRole(&data, rawUserInfoResponse.Body)
+	org := s.extractOrganization()
+
+	fmt.Println("=======================================================================================")
+	fmt.Println(org, role, data.Groups)
+	fmt.Println("=======================================================================================")
+
+	userInfo.Role = role
+	userInfo.OrgName = org
 
 	if !s.IsTeamMember(client) {
 		return nil, errors.New("User not a member of one of the required teams")
@@ -366,4 +378,10 @@ func (s *SocialGenericOAuth) FetchOrganizations(client *http.Client) ([]string, 
 	s.log.Debug("Received organizations", "logins", logins)
 
 	return logins, true
+func (s *SocialGenericOAuth) extractOrganization() string {
+	if s.orgName != "" {
+		return s.orgName
+	}
+
+	return ""
 }

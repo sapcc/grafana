@@ -124,6 +124,7 @@ func createUser(extUser *models.ExternalUserInfo) (*models.User, error) {
 		Login:        extUser.Login,
 		Email:        extUser.Email,
 		Name:         extUser.Name,
+		OrgName:      extUser.OrgName,
 		SkipOrgSetup: len(extUser.OrgRoles) > 0,
 	}
 

@@ -17,6 +17,8 @@ type OAuthInfo struct {
 	TlsClientKey           string
 	TlsClientCa            string
 	TlsSkipVerify          bool
+	GroupRoleMap           []string
+	OrgName                string
 }
 
 type OAuther struct {

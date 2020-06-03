@@ -30,6 +30,7 @@ type ExternalUserInfo struct {
 	Email          string
 	Login          string
 	Name           string
+	OrgName        string
 	Groups         []string
 	OrgRoles       map[int64]RoleType
 	IsGrafanaAdmin *bool // This is a pointer to know if we should sync this or not (nil = ignore sync)

@@ -20,6 +20,7 @@ type BasicUserInfo struct {
 	Login   string
 	Company string
 	Role    string
+	OrgName string
 	Groups  []string
 }
 
@@ -96,6 +97,8 @@ func NewOAuthService() {
 			TlsClientKey:       sec.Key("tls_client_key").String(),
 			TlsClientCa:        sec.Key("tls_client_ca").String(),
 			TlsSkipVerify:      sec.Key("tls_skip_verify_insecure").MustBool(),
+			GroupRoleMap:       sec.Key("group_role_map").Strings(" "),
+			OrgName:            sec.Key("org_name").String(),
 		}
 
 		if !info.Enabled {
@@ -174,6 +177,8 @@ func NewOAuthService() {
 				emailAttributeName:   info.EmailAttributeName,
 				emailAttributePath:   info.EmailAttributePath,
 				roleAttributePath:    info.RoleAttributePath,
+				groupRoleMap:         info.GroupRoleMap,
+				orgName:              info.OrgName,
 				teamIds:              sec.Key("team_ids").Ints(","),
 				allowedOrganizations: util.SplitString(sec.Key("allowed_organizations").String()),
 			}
