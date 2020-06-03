@@ -20,6 +20,7 @@ type BasicUserInfo struct {
 	Login   string
 	Company string
 	Role    string
+	OrgName string
 	Groups  []string
 }
 
@@ -76,6 +77,7 @@ func NewOAuthService() {
 			EmailAttributePath:           sec.Key("email_attribute_path").String(),
 			RoleAttributePath:            sec.Key("role_attribute_path").String(),
 			GroupRoleMap:                 sec.Key("group_role_map").Strings(" "),
+			OrgName:                      sec.Key("org_name").String(),
 			AllowedDomains:               util.SplitString(sec.Key("allowed_domains").String()),
 			HostedDomain:                 sec.Key("hosted_domain").String(),
 			AllowSignup:                  sec.Key("allow_sign_up").MustBool(),
@@ -173,6 +175,7 @@ func NewOAuthService() {
 				emailAttributePath:   info.EmailAttributePath,
 				roleAttributePath:    info.RoleAttributePath,
 				groupRoleMap:         info.GroupRoleMap,
+				orgName:              info.OrgName,
 				teamIds:              sec.Key("team_ids").Ints(","),
 				allowedOrganizations: util.SplitString(sec.Key("allowed_organizations").String()),
 			}
