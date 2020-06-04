@@ -82,8 +82,8 @@ type UserInfoJson struct {
 	Email       string              `json:"email"`
 	Upn         string              `json:"upn"`
 	Attributes  map[string][]string `json:"attributes"`
-	rawJSON     []byte
 	Groups      []string            `json:"groups"`
+	rawJSON     []byte
 }
 
 func (info *UserInfoJson) String() string {
@@ -135,16 +135,20 @@ func (s *SocialGenericOAuth) fillUserInfo(userInfo *BasicUserInfo, data *UserInf
 	}
 	if userInfo.Role == "" {
 		role, err := s.extractRole(data)
+		fmt.Println("=======================================================================================")
+		fmt.Println(role)
+		fmt.Println("=======================================================================================")
 		if err != nil {
 			s.log.Error("Failed to extract role", "error", err)
 		} else {
 			userInfo.Role = role
 		}
 	}
+
 	org := s.extractOrganization()
 	userInfo.OrgName = org
 	fmt.Println("=======================================================================================")
-	fmt.Println(org, role, data.Groups)
+	fmt.Println(org)
 	fmt.Println("=======================================================================================")
 
 	if userInfo.Name == "" {
@@ -396,6 +400,8 @@ func (s *SocialGenericOAuth) FetchOrganizations(client *http.Client) ([]string, 
 	s.log.Debug("Received organizations", "logins", logins)
 
 	return logins, true
+}
+
 func (s *SocialGenericOAuth) extractOrganization() string {
 	if s.orgName != "" {
 		return s.orgName
